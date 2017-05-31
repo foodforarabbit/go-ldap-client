@@ -6,6 +6,7 @@ import (
 	"os"
   "encoding/json"
 	"fmt"
+	"sort"
 
 	"github.com/foodforarabbit/go-ldap-client"
 )
@@ -77,7 +78,17 @@ func main() {
 		log.Fatalf("Error getting groups for user %s: %+v", username, err)
 	}
 	for _, user2 := range users {
-		log.Printf("allUser: %+v", user2)
+
+		log.Println("------")
+    si := make([]string, 0, len(user2))
+    for i := range user2 {
+        si = append(si, i)
+    }
+		sort.Strings(si)
+    for _, i := range si {
+        log.Printf("%s: %+v\n", i, user2[i])
+    }
+		// log.Printf("allUser: %+v", user2)
 	}
 	log.Printf("Groups: %+v", groups)
 }

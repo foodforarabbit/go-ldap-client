@@ -19,6 +19,7 @@ type LDAPClient struct {
 	Host               string
 	ServerName         string
 	UserFilter         string // e.g. "(uid=%s)"
+	UserObjectFilter	 string // e.g. "(&(objectCategory=person)(objectClass=user))"
 	Conn               *ldap.Conn
 	Port               int
 	InsecureSkipVerify bool
@@ -134,8 +135,8 @@ func (lc *LDAPClient) Authenticate(username, password string) (bool, map[string]
 	return true, user, nil
 }
 // Authenticate authenticates the user against the ldap backend.
-func (lc *LDAPClient) GetUsers() ([]map[string]string, error) {
-	users := make([]map[string]string, 1)
+func (lc *LDAPClient) GetUsers() ([]map[string][]string, error) {
+	users := make([]map[string][]string, 1)
 	err := lc.Connect()
 	if err != nil {
 		return users, err
@@ -150,7 +151,7 @@ func (lc *LDAPClient) GetUsers() ([]map[string]string, error) {
 	}
 
 	attributes := append(lc.Attributes, "dn")
-	// Search for the given username
+
 	searchRequest := ldap.NewSearchRequest(
 		lc.Base,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
@@ -169,9 +170,9 @@ func (lc *LDAPClient) GetUsers() ([]map[string]string, error) {
 	}
 
 	for _, entry := range sr.Entries {
-		user := map[string]string{}
+		user := map[string][]string{}
 		for _, attr := range lc.Attributes {
-			user[attr] = entry.GetAttributeValue(attr)
+			user[attr] = entry.GetAttributeValues(attr)
 		}
 		users = append(users, user)
 	}
