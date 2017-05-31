@@ -133,6 +133,51 @@ func (lc *LDAPClient) Authenticate(username, password string) (bool, map[string]
 
 	return true, user, nil
 }
+// Authenticate authenticates the user against the ldap backend.
+func (lc *LDAPClient) GetUsers() ([]map[string]string, error) {
+	users := make([]map[string]string, 1)
+	err := lc.Connect()
+	if err != nil {
+		return users, err
+	}
+
+	// First bind with a read only user
+	if lc.BindDN != "" && lc.BindPassword != "" {
+		err := lc.Conn.Bind(lc.BindDN, lc.BindPassword)
+		if err != nil {
+			return users, err
+		}
+	}
+
+	attributes := append(lc.Attributes, "dn")
+	// Search for the given username
+	searchRequest := ldap.NewSearchRequest(
+		lc.Base,
+		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+		"(&(objectCategory=person)(objectClass=user))",
+		attributes,
+		nil,
+	)
+
+	sr, err := lc.Conn.Search(searchRequest)
+	if err != nil {
+		return users, err
+	}
+
+	if len(sr.Entries) < 1 {
+		return users, errors.New("No users")
+	}
+
+	for _, entry := range sr.Entries {
+		user := map[string]string{}
+		for _, attr := range lc.Attributes {
+			user[attr] = entry.GetAttributeValue(attr)
+		}
+		users = append(users, user)
+	}
+
+	return users, nil
+}
 
 // GetGroupsOfUser returns the group for a user.
 func (lc *LDAPClient) GetGroupsOfUser(username string) ([]string, error) {
